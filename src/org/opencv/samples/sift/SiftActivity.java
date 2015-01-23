@@ -1,9 +1,12 @@
 package org.opencv.samples.sift;
 
+import java.io.File;
 import java.util.Arrays;
 
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
+import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.core.Core;
@@ -14,20 +17,20 @@ import org.opencv.core.MatOfInt;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
-import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.CameraBridgeViewBase.CvCameraViewListener2;
 import org.opencv.imgproc.Imgproc;
-import org.opencv.samples.sift.R;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.WindowManager;
 
+
 public class SiftActivity extends Activity implements CvCameraViewListener2 {
-    private static final String  TAG                 = "OCVSample::Activity";
+	
+    private static final String  TAG                 = "SiftActivity";
 
     public static final int      VIEW_MODE_RGBA      = 0;
     public static final int      VIEW_MODE_HIST      = 1;
@@ -74,6 +77,24 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
+                    
+                    //=============
+                    Log.i(TAG, "Start user defined functions");
+                    File sdcard = Environment.getExternalStorageDirectory();
+                    String path = sdcard + "/Exp";
+                    Sift sift = new Sift();
+                    sift.setPathOne(path+"/img_1.jpg");
+                    sift.setPathTwo(path+"/img_2.jpg");
+                    sift.readImage();
+                    sift.preprocessImage();
+                    sift.detectImage();
+                    sift.describeImage();
+                    sift.matchImage();
+                    sift.formMatchPoints(50);
+                    sift.postprocessImage();
+                    sift.writeMatches(path, "matchPoints.txt");                  
+                    Log.i(TAG, "End user defined functions");
+                    //=============
                 } break;
                 default:
                 {
@@ -88,14 +109,15 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
     }
 
     /** Called when the activity is first created. */
-    @Override
+	@Override
     public void onCreate(Bundle savedInstanceState) {
         Log.i(TAG, "called onCreate");
         super.onCreate(savedInstanceState);
+        
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         setContentView(R.layout.sift_activity_surface_view);
-
+        
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.sift_activity_surface_view);
         mOpenCvCameraView.setCvCameraViewListener(this);
     }
@@ -103,6 +125,7 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
     @Override
     public void onPause()
     {
+    	Log.i(TAG, "called onPause");
         super.onPause();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
@@ -111,11 +134,13 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
     @Override
     public void onResume()
     {
+    	Log.i(TAG, "called onResume");
         super.onResume();
-        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_3, this, mLoaderCallback);
+        OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_2_4_9, this, mLoaderCallback);
     }
 
     public void onDestroy() {
+    	Log.i(TAG, "called onDestroy");
         super.onDestroy();
         if (mOpenCvCameraView != null)
             mOpenCvCameraView.disableView();
