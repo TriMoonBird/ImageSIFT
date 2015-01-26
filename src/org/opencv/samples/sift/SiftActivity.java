@@ -22,15 +22,6 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
     
     public static final int		 WAITING_TIME		 = 0; //in ms
 
-    public static final int      VIEW_MODE_RGBA      = 0;
-    public static final int      VIEW_MODE_HIST      = 1;
-    public static final int      VIEW_MODE_CANNY     = 2;
-    public static final int      VIEW_MODE_SEPIA     = 3;
-    public static final int      VIEW_MODE_SOBEL     = 4;
-    public static final int      VIEW_MODE_ZOOM      = 5;
-    public static final int      VIEW_MODE_PIXELIZE  = 6;
-    public static final int      VIEW_MODE_POSTERIZE = 7;
-
     private boolean				 mCameraReady;
     private Sift				 mSift;
     private CameraBridgeViewBase mOpenCvCameraView;
@@ -44,6 +35,26 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
+        	    	/*
+        	    	File sdcard = Environment.getExternalStorageDirectory();
+        	        String path = sdcard + "/Exp/";
+        	        
+        	        mSift = new Sift();
+        	        mSift.setPathOne(path+"img_1.jpg");
+        	        mSift.setPathTwo(path+"img_2.jpg");
+        	        mSift.readImage();
+        	        
+        	        mSift.preprocessImage();
+        	        mSift.nativeSiftImage();
+        	        //mSift.detectImage();
+        	        //mSift.describeImage();
+        	        mSift.matchImage();
+        	        mSift.formMatchPoints(50);
+        	        mSift.drawGoodMatches();
+        	        mSift.postprocessImage();
+        	        mSift.saveImage(path, String.valueOf(System.currentTimeMillis()) + ".jpg");
+        	        mSift.writeMatches(path, String.valueOf(System.currentTimeMillis()) + ".txt");
+        	        */
                 } break;
                 default:
                 {
@@ -104,6 +115,7 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
     }
 
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
+    	
     	Mat gray = inputFrame.gray();
     	
     	try {
@@ -120,12 +132,13 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
 	        String path = sdcard + "/Exp/";
 	        
 	        mSift.preprocessImage();
-	        mSift.detectImage();
-	        mSift.describeImage();
+	        mSift.nativeSiftImage();
+	        //mSift.detectImage();
+	        //mSift.describeImage();
 	        mSift.matchImage();
 	        mSift.formMatchPoints(50);
-	        mSift.postprocessImage();
 	        mSift.drawGoodMatches();
+	        mSift.postprocessImage();
 	        mSift.saveImage(path, String.valueOf(System.currentTimeMillis()) + ".jpg");
 	        mSift.writeMatches(path, String.valueOf(System.currentTimeMillis()) + ".txt");
     	} else {
@@ -134,6 +147,7 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
     	}
     	
     	return gray;
+
     }
     
 }

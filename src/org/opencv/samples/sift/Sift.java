@@ -93,34 +93,46 @@ public class Sift {
 		mImgTwo = ImageManipulation.downSamplingImage(mRawImgTwo, DOWNSAMPLE_FACTOR);
 	}
 	
-	public void saveImage(String path, String filename) {
+	public void saveImage(String path, String filename, Mat image) {
 		Log.i(TAG, "called saveImage");
-		Highgui.imwrite(path+filename, mMatchImage);
+		Highgui.imwrite(path+filename, image);
+	}
+	
+	public void saveImage(String path, String filename) {
+		saveImage(path, filename, mMatchImage);
 	}
 
+	// SIFT detector and descriptor
+	public void nativeSiftImage() {
+		Log.i(TAG, "called nativeSiftDetectImage");
+		NonfreeJNILib.performNativeSift(mImgOne.getNativeObjAddr(),
+										mKeypointsOne.getNativeObjAddr(),
+										mDescriptorOne.getNativeObjAddr());
+		
+		NonfreeJNILib.performNativeSift(mImgTwo.getNativeObjAddr(),
+										mKeypointsTwo.getNativeObjAddr(),
+										mDescriptorTwo.getNativeObjAddr());
+	}
+	
+	// ORB detector
 	public void detectImage() {
 		Log.i(TAG, "called detectImage");
 		FeatureDetector detector = FeatureDetector.create(FeatureDetector.ORB);
-		Log.i(TAG, "dectect 1");
 		detector.detect(mImgOne, mKeypointsOne);
-		Log.i(TAG, "dectect 2");
 		detector.detect(mImgTwo, mKeypointsTwo);
-		Log.i(TAG, "dectect 3");
 	}
 	
+	// ORB descriptor
 	public void describeImage() {
 		Log.i(TAG, "called describeImage");
 		DescriptorExtractor descriptor = DescriptorExtractor.create(DescriptorExtractor.ORB);
-		Log.i(TAG, "describe 1");
 		descriptor.compute(mImgOne, mKeypointsOne, mDescriptorOne);
-		Log.i(TAG, "describe 2");
 		descriptor.compute(mImgTwo, mKeypointsTwo, mDescriptorTwo);
-		Log.i(TAG, "describe 3");
 	}
 	
 	public void matchImage() {
 		Log.i(TAG, "called matchImage");
-		DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE);
+		DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
 		matcher.match(mDescriptorTwo, mDescriptorOne, mMatches);
 		Log.i(TAG, "MATCHES: " + mMatches.toString());
 	}
@@ -129,6 +141,7 @@ public class Sift {
 		Log.i(TAG, "called formMatchPoints");
 		mMatchArray = mMatches.toArray();
 		int pairNumber = Math.min(num, mMatchArray.length);
+		Log.i(TAG, "PariNumber: " + String.valueOf(pairNumber));
 		// sort the matches by distance
 		Arrays.sort(mMatchArray, new Comparator<DMatch>() {
 			public int compare(DMatch one, DMatch two) {
@@ -138,7 +151,9 @@ public class Sift {
 		// get the first pairNumber match points
 		mMatchPoints = new int[pairNumber][DIM_EACH_MATCH];
 		KeyPoint[] keyPointsOne = mKeypointsOne.toArray();
+		Log.i(TAG, "KeypointsOne: " + String.valueOf(keyPointsOne.length) + " DescriptorOne: " + mDescriptorOne.toString());
 		KeyPoint[] keyPointsTwo = mKeypointsTwo.toArray();
+		Log.i(TAG, "KeypointsTwo: " + String.valueOf(keyPointsTwo.length) + " DescriptorTwo: " + mDescriptorTwo.toString());
 		for (int i = 0; i < pairNumber; ++i) {
 			mMatchPoints[i][0] = (int)keyPointsOne[mMatchArray[i].trainIdx].pt.x;
 			mMatchPoints[i][1] = (int)keyPointsOne[mMatchArray[i].trainIdx].pt.y;
