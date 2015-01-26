@@ -7,12 +7,15 @@ import java.util.Arrays;
 import java.util.Comparator;
 
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfByte;
 import org.opencv.core.MatOfDMatch;
 import org.opencv.core.MatOfKeyPoint;
+import org.opencv.core.Scalar;
 import org.opencv.features2d.DMatch;
 import org.opencv.features2d.DescriptorExtractor;
 import org.opencv.features2d.DescriptorMatcher;
 import org.opencv.features2d.FeatureDetector;
+import org.opencv.features2d.Features2d;
 import org.opencv.features2d.KeyPoint;
 import org.opencv.highgui.Highgui;
 
@@ -38,6 +41,7 @@ public class Sift {
 	private MatOfDMatch			mMatches;
 	private DMatch[]			mMatchArray;
 	private int[][]				mMatchPoints;
+	private Mat					mMatchImage;
 	
 	public Sift() {
 		mKeypointsOne = new MatOfKeyPoint();
@@ -45,6 +49,7 @@ public class Sift {
 		mDescriptorOne = new Mat();
 		mDescriptorTwo = new Mat();
 		mMatches = new MatOfDMatch();
+		mMatchImage = new Mat();
 	}
 	
 	public void setPathOne(String path) {
@@ -66,16 +71,31 @@ public class Sift {
 		return true;
 	}
 	
+	public void setRawImgOne(Mat img) {
+		mRawImgOne = img;
+	}
+	
+	public void setRawImgTwo(Mat img) {
+		mRawImgTwo = img;
+	}
+	
+	public Mat getRawImgOne() {
+		return mRawImgOne;
+	}
+	
+	public Mat getRawImgTwo() {
+		return mRawImgTwo;
+	}
+	
 	public void preprocessImage() {
 		Log.i(TAG, "called preprocessImage");
 		mImgOne = ImageManipulation.downSamplingImage(mRawImgOne, DOWNSAMPLE_FACTOR);
 		mImgTwo = ImageManipulation.downSamplingImage(mRawImgTwo, DOWNSAMPLE_FACTOR);
 	}
 	
-	public void saveImage(String path) {
+	public void saveImage(String path, String filename) {
 		Log.i(TAG, "called saveImage");
-		Highgui.imwrite(path, mImgOne);
-		Highgui.imwrite(path+"_2.jpg", mImgTwo);
+		Highgui.imwrite(path+filename, mMatchImage);
 	}
 
 	public void detectImage() {
@@ -84,7 +104,7 @@ public class Sift {
 		Log.i(TAG, "dectect 1");
 		detector.detect(mImgOne, mKeypointsOne);
 		Log.i(TAG, "dectect 2");
-		detector.detect(mImgOne, mKeypointsTwo);
+		detector.detect(mImgTwo, mKeypointsTwo);
 		Log.i(TAG, "dectect 3");
 	}
 	
@@ -92,9 +112,9 @@ public class Sift {
 		Log.i(TAG, "called describeImage");
 		DescriptorExtractor descriptor = DescriptorExtractor.create(DescriptorExtractor.ORB);
 		Log.i(TAG, "describe 1");
-		descriptor.compute(mRawImgOne, mKeypointsOne, mDescriptorOne);
+		descriptor.compute(mImgOne, mKeypointsOne, mDescriptorOne);
 		Log.i(TAG, "describe 2");
-		descriptor.compute(mRawImgTwo, mKeypointsTwo, mDescriptorTwo);
+		descriptor.compute(mImgTwo, mKeypointsTwo, mDescriptorTwo);
 		Log.i(TAG, "describe 3");
 	}
 	
@@ -128,6 +148,7 @@ public class Sift {
 	}
 	
 	public void postprocessImage() {
+		Log.i(TAG, "called postprocessImage");
         for (int i = 0; i < mMatchPoints.length; ++i) {
         	for (int j = 0; j < DIM_EACH_MATCH; ++j) {
         		mMatchPoints[i][j] *= DOWNSAMPLE_FACTOR;
@@ -141,6 +162,13 @@ public class Sift {
 			Log.e(TAG, "null matched points");
 		}
 		return mMatchPoints;
+	}
+	
+	public void drawGoodMatches() {
+		Log.i(TAG, "called drawGoodMatches");
+        Features2d.drawMatches(mImgTwo, mKeypointsTwo, mImgOne, mKeypointsOne, 
+                mMatches, mMatchImage, Scalar.all(-1), Scalar.all(-1), 
+                new MatOfByte(), Features2d.NOT_DRAW_SINGLE_POINTS);
 	}
 	
 	public void writeMatches(String path, String filename) {
@@ -161,108 +189,3 @@ public class Sift {
 	
 }
 
-
-/*
-int main( int argc, char** argv )
-{
-  String path_1 = "../Pic/img_1.jpg";
-  String path_2 = "../Pic/img_2.jpg";
-
-  Mat rawimg_1 = imread( path_1, CV_LOAD_IMAGE_COLOR );
-  Mat rawimg_2 = imread( path_2, CV_LOAD_IMAGE_COLOR );
-
-  if( !rawimg_1.data || !rawimg_2.data )
-  { std::cout<< " --(!) Error reading images " << std::endl; return -1; }
-
-
-  Mat img_1 = downSamplingImage(rawimg_1, DOWNSAMPLE_FACTOR);
-  Mat img_2 = downSamplingImage(rawimg_2, DOWNSAMPLE_FACTOR);
-
-  //-- Step 1: Detect the keypoints using SIFT Detector
-  int minHessian = MIN_HESSIAN;
-
-  SiftFeatureDetector detector( minHessian );
-
-  std::vector<KeyPoint> keypoints_1, keypoints_2;
-
-  clock_t detectStart = clock();
-  detector.detect( img_1, keypoints_1 );
-  detector.detect( img_2, keypoints_2 );
-  clock_t detectEnd = clock();
-  printTimeMs("Detect time: ", clockDiffMs(detectEnd, detectStart));
-
-  //-- Step 2: Calculate descriptors (feature vectors)
-  SiftDescriptorExtractor extractor;
-
-  Mat descriptors_1, descriptors_2;
-
-  clock_t extractStart = clock();
-  extractor.compute( img_1, keypoints_1, descriptors_1 );
-  extractor.compute( img_2, keypoints_2, descriptors_2 );
-  clock_t extractEnd = clock();
-  printTimeMs("Extract time: ", clockDiffMs(extractEnd, extractStart));
-
-  //-- Step 3: Matching descriptor vectors using FLANN matcher
-  FlannBasedMatcher matcher;
-  std::vector< DMatch > matches;
-
-  clock_t matchStart = clock();
-  matcher.match( descriptors_1, descriptors_2, matches );
-  clock_t matchEnd = clock();
-  printTimeMs("Match time: ", clockDiffMs(matchEnd, matchStart));
-
-  double max_dist = 0; double min_dist = 100;
-
-  //-- Quick calculation of max and min distances between keypoints
-  for( int i = 0; i < descriptors_1.rows; i++ )
-  {
-	double dist = matches[i].distance;
-    if( dist < min_dist ) min_dist = dist;
-    if( dist > max_dist ) max_dist = dist;
-  }
-
-  cout << "-- Max dist : " << max_dist << endl;
-  cout << "-- Min dist : " << min_dist << endl;
-
-  //-- Draw only "good" matches (i.e. whose distance is less than TIME_THRES*min_dist,
-  //-- or a small arbitary value ( 0.02 ) in the event that min_dist is very
-  //-- small)
-  std::vector< DMatch > good_matches;
-
-  for( int i = 0; i < descriptors_1.rows; i++ )
-  {
-	if( matches[i].distance <= max(TIME_THRES*min_dist, 0.02) )
-    { good_matches.push_back( matches[i]); }
-  }
-
-  //-- Draw only "good" matches
-  Mat img_matches;
-  drawMatches( img_1, keypoints_1, img_2, keypoints_2,
-               good_matches, img_matches, Scalar::all(-1), Scalar::all(-1),
-               vector<char>(), DrawMatchesFlags::NOT_DRAW_SINGLE_POINTS );
-
-  //-- Show detected matches
-  //imshow( "Good Matches", img_matches );
-  imwrite("../Result/matchPicture.jpg", img_matches);
-
-  //for( int i = 0; i < (int)good_matches.size(); i++ )
-  //{ printf( "-- Good Match [%d] Keypoint 1: %d  -- Keypoint 2: %d  \n", i, good_matches[i].queryIdx, good_matches[i].trainIdx ); }
-
-  ofstream matchFile ("../Result/matchPoints.txt");
-  if (!matchFile.is_open())
-  { cout << "File Error" << endl; return -2; }
-
-  for( int i = 0; i < (int)good_matches.size(); i++ )
-  {
-	int j = good_matches[i].queryIdx;
-	int k = good_matches[i].trainIdx;
-	matchFile << (int)keypoints_1[j].pt.x << " " << (int)keypoints_1[j].pt.y << " "
-			<< (int)keypoints_2[k].pt.x << " " << (int)keypoints_2[k].pt.y << endl;
-  }
-  matchFile.close();
-
-  waitKey(0);
-
-  return 0;
-}
-*/
