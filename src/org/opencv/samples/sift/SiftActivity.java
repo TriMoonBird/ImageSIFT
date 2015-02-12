@@ -1,7 +1,5 @@
 package org.opencv.samples.sift;
 
-import java.io.File;
-
 import org.opencv.android.BaseLoaderCallback;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.CameraBridgeViewBase.CvCameraViewFrame;
@@ -12,7 +10,6 @@ import org.opencv.core.Mat;
 
 import android.app.Activity;
 import android.os.Bundle;
-import android.os.Environment;
 import android.util.Log;
 import android.view.WindowManager;
 
@@ -20,12 +17,14 @@ import android.view.WindowManager;
 public class SiftActivity extends Activity implements CvCameraViewListener2 {
     private static final String  TAG                 = "SiftActivity";
     
-    public static final int		 WAITING_TIME		 = 0; //in ms
+    public static final int		 WAITING_TIME		 = 200; //in ms
 
     private boolean				 mCameraReady;
-    private Sift				 mSift;
+    //private Sift				 mSift;
     private CameraBridgeViewBase mOpenCvCameraView;
-
+    private long				 mLastPicTime;
+    private Mat					 mImageOne;
+    private Mat					 mImageTwo;
     
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
         @Override
@@ -35,26 +34,6 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
-        	    	/*
-        	    	File sdcard = Environment.getExternalStorageDirectory();
-        	        String path = sdcard + "/Exp/";
-        	        
-        	        mSift = new Sift();
-        	        mSift.setPathOne(path+"img_1.jpg");
-        	        mSift.setPathTwo(path+"img_2.jpg");
-        	        mSift.readImage();
-        	        
-        	        mSift.preprocessImage();
-        	        mSift.nativeSiftImage();
-        	        //mSift.detectImage();
-        	        //mSift.describeImage();
-        	        mSift.matchImage();
-        	        mSift.formMatchPoints(50);
-        	        mSift.drawGoodMatches();
-        	        mSift.postprocessImage();
-        	        mSift.saveImage(path, String.valueOf(System.currentTimeMillis()) + ".jpg");
-        	        mSift.writeMatches(path, String.valueOf(System.currentTimeMillis()) + ".txt");
-        	        */
                 } break;
                 default:
                 {
@@ -83,8 +62,7 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
     }
 
     @Override
-    public void onPause()
-    {
+    public void onPause() {
     	Log.i(TAG, "called onPause");
         super.onPause();
         if (mOpenCvCameraView != null)
@@ -107,47 +85,31 @@ public class SiftActivity extends Activity implements CvCameraViewListener2 {
 
     public void onCameraViewStarted(int width, int height) {
     	mCameraReady = false;
-    	mSift = new Sift();
+    	mLastPicTime = System.currentTimeMillis();
+    	mImageOne = new Mat();
+    	mImageTwo = new Mat();
     }
 
     public void onCameraViewStopped() {
     	mCameraReady = false;
     }
-
+    
     public Mat onCameraFrame(CvCameraViewFrame inputFrame) {
-    	
     	Mat gray = inputFrame.gray();
-    	
-    	try {
-			Thread.sleep(WAITING_TIME);
-		} catch (InterruptedException e) {
-			e.printStackTrace();
-		}
-    	
-    	if (mCameraReady == true) {
-	    	mSift.setRawImgOne(mSift.getRawImgTwo());
-	    	mSift.setRawImgTwo(gray);
-	    	
-	    	File sdcard = Environment.getExternalStorageDirectory();
-	        String path = sdcard + "/Exp/";
-	        
-	        mSift.preprocessImage();
-	        mSift.nativeSiftImage();
-	        //mSift.detectImage();
-	        //mSift.describeImage();
-	        mSift.matchImage();
-	        mSift.formMatchPoints(50);
-	        mSift.drawGoodMatches();
-	        mSift.postprocessImage();
-	        mSift.saveImage(path, String.valueOf(System.currentTimeMillis()) + ".jpg");
-	        mSift.writeMatches(path, String.valueOf(System.currentTimeMillis()) + ".txt");
-    	} else {
-    		mCameraReady = true;
-    		mSift.setRawImgTwo(gray);
+    	long currentTime = System.currentTimeMillis();
+    	if (currentTime - mLastPicTime >= WAITING_TIME) {
+    		mLastPicTime = currentTime;
+	    	if (mCameraReady == true) {
+	    		mImageTwo.copyTo(mImageOne);
+	    		gray.copyTo(mImageTwo);
+	    		ImageMatchTask task = new ImageMatchTask();
+    			task.execute(mImageOne, mImageTwo);
+	    	} else {
+	    		mCameraReady = true;
+	    		gray.copyTo(mImageTwo);
+	    	}
     	}
-    	
     	return gray;
-
     }
     
 }

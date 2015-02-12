@@ -87,6 +87,14 @@ public class Sift {
 		return mRawImgTwo;
 	}
 	
+	public Mat getImgOne() {
+		return mImgOne;
+	}
+	
+	public Mat getImgTwo() {
+		return mImgTwo;
+	}
+	
 	public void preprocessImage() {
 		Log.i(TAG, "called preprocessImage");
 		mImgOne = ImageManipulation.downSamplingImage(mRawImgOne, DOWNSAMPLE_FACTOR);
@@ -132,7 +140,8 @@ public class Sift {
 	
 	public void matchImage() {
 		Log.i(TAG, "called matchImage");
-		DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.FLANNBASED);
+		DescriptorMatcher matcher = DescriptorMatcher.create(DescriptorMatcher.BRUTEFORCE);
+		Log.i(TAG, "MATCHER: " + mDescriptorOne.toString() + mDescriptorTwo.toString());
 		matcher.match(mDescriptorTwo, mDescriptorOne, mMatches);
 		Log.i(TAG, "MATCHES: " + mMatches.toString());
 	}
